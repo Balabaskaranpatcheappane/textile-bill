@@ -1,10 +1,15 @@
 /* eslint-disable camelcase */
 
+// IF NOT EXISTS everywhere so this migration is safe to run against a
+// database that predates the migration system (e.g. tables created by
+// the old on-startup db.js). Fresh installs get the full schema; already-
+// initialised installs just have the migration marked as applied.
+
 exports.shorthands = undefined;
 
 exports.up = (pgm) => {
   pgm.sql(`
-    CREATE TABLE products (
+    CREATE TABLE IF NOT EXISTS products (
       id         SERIAL PRIMARY KEY,
       name       TEXT           NOT NULL,
       hsn        TEXT,
@@ -15,7 +20,7 @@ exports.up = (pgm) => {
       created_at TIMESTAMPTZ    NOT NULL DEFAULT NOW()
     );
 
-    CREATE TABLE customers (
+    CREATE TABLE IF NOT EXISTS customers (
       id         SERIAL PRIMARY KEY,
       name       TEXT        NOT NULL,
       phone      TEXT,
@@ -24,7 +29,7 @@ exports.up = (pgm) => {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
-    CREATE TABLE invoices (
+    CREATE TABLE IF NOT EXISTS invoices (
       id               SERIAL PRIMARY KEY,
       invoice_no       TEXT           NOT NULL UNIQUE,
       customer_id      INTEGER        REFERENCES customers(id) ON DELETE SET NULL,
@@ -42,7 +47,7 @@ exports.up = (pgm) => {
       created_at       TIMESTAMPTZ    NOT NULL DEFAULT NOW()
     );
 
-    CREATE TABLE invoice_items (
+    CREATE TABLE IF NOT EXISTS invoice_items (
       id         SERIAL PRIMARY KEY,
       invoice_id INTEGER        NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
       product_id INTEGER        REFERENCES products(id) ON DELETE SET NULL,
@@ -55,8 +60,8 @@ exports.up = (pgm) => {
       amount     NUMERIC(12,2)  NOT NULL
     );
 
-    CREATE INDEX idx_invoice_items_invoice ON invoice_items(invoice_id);
-    CREATE INDEX idx_invoices_date         ON invoices(invoice_date);
+    CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id);
+    CREATE INDEX IF NOT EXISTS idx_invoices_date         ON invoices(invoice_date);
   `);
 };
 

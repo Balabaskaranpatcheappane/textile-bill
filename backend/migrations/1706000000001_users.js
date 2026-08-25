@@ -4,7 +4,7 @@ exports.shorthands = undefined;
 
 exports.up = (pgm) => {
   pgm.sql(`
-    CREATE TABLE users (
+    CREATE TABLE IF NOT EXISTS users (
       id            SERIAL PRIMARY KEY,
       username      TEXT        NOT NULL UNIQUE,
       password_hash TEXT        NOT NULL,
@@ -15,11 +15,11 @@ exports.up = (pgm) => {
       last_login    TIMESTAMPTZ
     );
 
-    CREATE INDEX idx_users_username ON users(LOWER(username));
+    CREATE INDEX IF NOT EXISTS idx_users_username ON users(LOWER(username));
 
     -- Track which user created an invoice, without breaking existing rows.
     ALTER TABLE invoices
-      ADD COLUMN created_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+      ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
   `);
 };
 
