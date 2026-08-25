@@ -46,6 +46,18 @@ export interface Invoice {
   items?: InvoiceItem[];
 }
 
+export interface User {
+  id: number;
+  username: string;
+  name: string;
+  role: 'admin' | 'staff';
+}
+
+export interface LoginResponse {
+  token: string;
+  user: User;
+}
+
 export interface DashboardSummary {
   today: string;
   invoiceCount: number;

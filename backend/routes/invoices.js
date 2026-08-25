@@ -120,9 +120,9 @@ router.post('/', async (req, res, next) => {
       `INSERT INTO invoices
         (invoice_no, customer_id, customer_name, customer_gstin, customer_phone,
          customer_address, invoice_date, subtotal, gst_total, discount, grand_total,
-         payment_mode, notes)
+         payment_mode, notes, created_by)
        VALUES ($1,$2,$3,$4,$5,$6, COALESCE($7::date, CURRENT_DATE),
-               $8,$9,$10,$11,$12,$13)
+               $8,$9,$10,$11,$12,$13,$14)
        RETURNING *`,
       [
         invoice_no,
@@ -138,6 +138,7 @@ router.post('/', async (req, res, next) => {
         grand_total,
         payment_mode || 'CASH',
         notes || null,
+        req.user ? req.user.id : null,
       ],
     );
     const invoice = headRows[0];
