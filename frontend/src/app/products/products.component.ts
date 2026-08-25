@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 import { ApiService } from '../services/api.service';
 import { Product } from '../models';
@@ -8,7 +9,7 @@ import { Product } from '../models';
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [CommonModule, FormsModule, CurrencyPipe],
+  imports: [CommonModule, FormsModule, RouterLink, CurrencyPipe],
   template: `
     <div class="header-bar">
       <h2 style="margin:0">Products</h2>
@@ -16,7 +17,8 @@ import { Product } from '../models';
     </div>
 
     <div class="panel" style="margin-bottom:12px">
-      <input placeholder="Search by name or HSN…" [(ngModel)]="query" (ngModelChange)="reload()">
+      <input placeholder="Search by name, HSN or barcode…"
+             [(ngModel)]="query" (ngModelChange)="reload()">
     </div>
 
     <div class="panel" *ngIf="editing() as p" style="margin-bottom:12px">
@@ -40,6 +42,10 @@ import { Product } from '../models';
             <option [ngValue]="28">28</option>
           </select>
         </div>
+        <div style="grid-column: span 3">
+          <label>Barcode <span style="color:var(--muted)">(optional — auto-generated if blank)</span></label>
+          <input [(ngModel)]="p.barcode" placeholder="e.g. 8901234567890 or TX00000001">
+        </div>
       </div>
       <div style="margin-top:12px; display:flex; gap:8px">
         <button (click)="save()" [disabled]="!p.name">Save</button>
@@ -51,7 +57,7 @@ import { Product } from '../models';
       <table class="table">
         <thead>
           <tr>
-            <th>Name</th><th>HSN</th><th>Unit</th>
+            <th>Name</th><th>Barcode</th><th>HSN</th><th>Unit</th>
             <th class="right">Price</th><th class="right">Stock</th>
             <th class="right">GST%</th><th></th>
           </tr>
@@ -59,6 +65,10 @@ import { Product } from '../models';
         <tbody>
           <tr *ngFor="let p of products()">
             <td>{{ p.name }}</td>
+            <td>
+              <code *ngIf="p.barcode; else noBarcode" class="bc">{{ p.barcode }}</code>
+              <ng-template #noBarcode><span style="color:var(--muted)">—</span></ng-template>
+            </td>
             <td>{{ p.hsn || '—' }}</td>
             <td>{{ p.unit }}</td>
             <td class="right">{{ p.price | currency:'INR':'symbol':'1.2-2' }}</td>
@@ -67,12 +77,14 @@ import { Product } from '../models';
             </td>
             <td class="right">{{ p.gst }}%</td>
             <td class="right">
-              <button class="secondary" (click)="edit(p)">Edit</button>
+              <a *ngIf="p.barcode" class="btn secondary"
+                 [routerLink]="['/products', p.id, 'barcode']">Label</a>
+              <button class="secondary" style="margin-left:6px" (click)="edit(p)">Edit</button>
               <button class="danger" style="margin-left:6px" (click)="remove(p)">Delete</button>
             </td>
           </tr>
           <tr *ngIf="products().length === 0">
-            <td colspan="7" style="text-align:center; color:var(--muted); padding:20px">
+            <td colspan="8" style="text-align:center; color:var(--muted); padding:20px">
               No products yet.
             </td>
           </tr>
@@ -80,6 +92,12 @@ import { Product } from '../models';
       </table>
     </div>
   `,
+  styles: [`
+    .bc {
+      background: #eef2ff; color: var(--primary);
+      padding: 2px 6px; border-radius: 4px; font-size: 12px;
+    }
+  `],
 })
 export class ProductsComponent implements OnInit {
   private api = inject(ApiService);
@@ -94,7 +112,7 @@ export class ProductsComponent implements OnInit {
   }
 
   startNew() {
-    this.editing.set({ name: '', hsn: '', unit: 'MTR', price: 0, stock: 0, gst: 5 });
+    this.editing.set({ name: '', hsn: '', unit: 'MTR', price: 0, stock: 0, gst: 5, barcode: '' });
   }
   edit(p: Product) { this.editing.set({ ...p }); }
 
@@ -104,7 +122,10 @@ export class ProductsComponent implements OnInit {
     const req = p.id
       ? this.api.updateProduct(p.id, p)
       : this.api.createProduct(p);
-    req.subscribe(() => { this.editing.set(null); this.reload(); });
+    req.subscribe({
+      next: () => { this.editing.set(null); this.reload(); },
+      error: (e) => alert(e?.error?.error || 'Save failed'),
+    });
   }
 
   remove(p: Product) {

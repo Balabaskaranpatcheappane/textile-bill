@@ -17,6 +17,10 @@ export class ApiService {
   createProduct(p: Partial<Product>) { return this.http.post<Product>(`${this.base}/products`, p); }
   updateProduct(id: number, p: Partial<Product>) { return this.http.put<Product>(`${this.base}/products/${id}`, p); }
   deleteProduct(id: number) { return this.http.delete<void>(`${this.base}/products/${id}`); }
+  findProductByBarcode(code: string) {
+    return this.http.get<Product>(`${this.base}/products/barcode/${encodeURIComponent(code)}`);
+  }
+  barcodeImageUrl(id: number) { return `${this.base}/products/${id}/barcode.png`; }
 
   // Customers
   listCustomers(q?: string): Observable<Customer[]> {

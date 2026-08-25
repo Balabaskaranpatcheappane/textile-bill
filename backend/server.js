@@ -2,7 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const bwipjs = require('bwip-js');
 
+const { pool } = require('./db');
 const { requireAuth } = require('./middleware/auth');
 const auth = require('./routes/auth');
 const products = require('./routes/products');
@@ -24,6 +26,29 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 // Public.
 app.use('/api/auth', auth);
+
+// Barcode PNG for a product. Public so <img src="…"> loads without a token
+// (the endpoint only reveals a barcode string for a given product id).
+app.get('/api/products/:id/barcode.png', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT barcode FROM products WHERE id = $1', [req.params.id],
+    );
+    if (!rows[0] || !rows[0].barcode) return res.status(404).send('No barcode');
+    const png = await bwipjs.toBuffer({
+      bcid:        'code128',
+      text:        rows[0].barcode,
+      scale:       3,
+      height:      12,
+      includetext: true,
+      textxalign:  'center',
+    });
+    res.set('Cache-Control', 'public, max-age=300').type('png').send(png);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send('Barcode render failed');
+  }
+});
 
 // Everything else needs a valid JWT.
 app.use('/api/products',  requireAuth, products);

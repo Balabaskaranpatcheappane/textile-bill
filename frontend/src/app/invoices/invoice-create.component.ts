@@ -20,6 +20,17 @@ interface Line extends InvoiceItem {
     </div>
 
     <div class="panel" style="margin-bottom:12px">
+      <label>📷 Scan barcode</label>
+      <input #scanner [(ngModel)]="scanCode"
+             placeholder="Focus here and scan (or type + Enter)"
+             (keydown.enter)="onScan(); $event.preventDefault()"
+             autofocus>
+      <div *ngIf="scanMsg()" class="scan-msg" [class.err]="scanErr()">
+        {{ scanMsg() }}
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
       <div class="grid-3">
         <div>
           <label>Customer</label>
@@ -119,6 +130,10 @@ interface Line extends InvoiceItem {
       </div>
     </div>
   `,
+  styles: [`
+    .scan-msg { margin-top: 8px; font-size: 12px; color: var(--success); }
+    .scan-msg.err { color: var(--danger); }
+  `],
 })
 export class InvoiceCreateComponent implements OnInit {
   private api = inject(ApiService);
@@ -127,6 +142,10 @@ export class InvoiceCreateComponent implements OnInit {
   products = signal<Product[]>([]);
   customers = signal<Customer[]>([]);
   lines = signal<Line[]>([]);
+
+  scanCode = '';
+  scanMsg = signal<string | null>(null);
+  scanErr = signal(false);
 
   customerId: number | null = null;
   customerName = '';
@@ -153,6 +172,41 @@ export class InvoiceCreateComponent implements OnInit {
   lineTotal(l: Line) {
     const base = (+l.qty || 0) * (+l.price || 0);
     return base + (base * (+l.gst || 0)) / 100;
+  }
+
+  onScan() {
+    const code = this.scanCode.trim();
+    if (!code) return;
+    this.api.findProductByBarcode(code).subscribe({
+      next: (p) => {
+        // If this product is already on the invoice, bump its qty; else add a line.
+        const idx = this.lines().findIndex((l) => l.product_id === p.id);
+        if (idx >= 0) {
+          this.lines.update((ls) => {
+            const copy = [...ls];
+            copy[idx] = { ...copy[idx]!, qty: (+copy[idx]!.qty || 0) + 1 };
+            return copy;
+          });
+        } else {
+          // Drop the first empty auto-added line, if any, so the invoice
+          // doesn't start with a blank row after the first scan.
+          this.lines.update((ls) => {
+            const trimmed = ls.filter((l) => !(l.product_id === null && !l.name && l.price === 0));
+            return [...trimmed, {
+              product_id: p.id, name: p.name, hsn: p.hsn ?? '', unit: p.unit,
+              qty: 1, price: p.price, gst: p.gst,
+            }];
+          });
+        }
+        this.scanErr.set(false);
+        this.scanMsg.set(`Added: ${p.name}`);
+        this.scanCode = '';
+      },
+      error: () => {
+        this.scanErr.set(true);
+        this.scanMsg.set(`No product with barcode "${code}"`);
+      },
+    });
   }
 
   addLine() {

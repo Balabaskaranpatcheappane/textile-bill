@@ -6,6 +6,7 @@ export interface Product {
   price: number;
   stock: number;
   gst: number;
+  barcode?: string | null;
 }
 
 export interface Customer {
