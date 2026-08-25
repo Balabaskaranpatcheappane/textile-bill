@@ -35,55 +35,73 @@ import { Invoice, PaperSize, ShopSettings } from '../models';
           <div class="th-head">
             <img *ngIf="logoUrl()" [src]="logoUrl()!" class="th-logo" alt="">
             <div class="th-name">{{ shop()?.shop_name || 'Textiles Shop' }}</div>
-            <div class="th-line" *ngIf="shop()?.address">{{ shop()?.address }}</div>
-            <div class="th-line" *ngIf="shop()?.phone || shop()?.email">
-              <span *ngIf="shop()?.phone">☎ {{ shop()?.phone }}</span>
-              <span *ngIf="shop()?.email"> · {{ shop()?.email }}</span>
+            <div class="th-sub" *ngIf="shop()?.address">{{ shop()?.address }}</div>
+            <div class="th-sub" *ngIf="shop()?.phone || shop()?.email">
+              <ng-container *ngIf="shop()?.phone">Ph: {{ shop()?.phone }}</ng-container>
+              <ng-container *ngIf="shop()?.phone && shop()?.email"> · </ng-container>
+              <ng-container *ngIf="shop()?.email">{{ shop()?.email }}</ng-container>
             </div>
-            <div class="th-line" *ngIf="shop()?.gstin">GSTIN: {{ shop()?.gstin }}</div>
+            <div class="th-sub" *ngIf="shop()?.gstin">GSTIN: {{ shop()?.gstin }}</div>
           </div>
-          <div class="th-sep"></div>
 
-          <div class="th-line"><b>Bill No:</b> {{ inv.invoice_no }}</div>
-          <div class="th-line"><b>Date:</b> {{ inv.invoice_date | date:'short' }}</div>
-          <div class="th-line" *ngIf="inv.customer_name !== 'Walk-in'">
-            <b>To:</b> {{ inv.customer_name }}
+          <div class="th-hr"></div>
+
+          <div class="th-badge">CASH BILL</div>
+
+          <div class="th-meta">
+            <div><span>Bill</span><b>{{ inv.invoice_no }}</b></div>
+            <div><span>Date</span><span>{{ inv.invoice_date | date:'dd/MM/yy HH:mm' }}</span></div>
+            <div *ngIf="inv.customer_name && inv.customer_name !== 'Walk-in'">
+              <span>To</span><span>{{ inv.customer_name }}</span>
+            </div>
+            <div *ngIf="inv.customer_phone">
+              <span>Phone</span><span>{{ inv.customer_phone }}</span>
+            </div>
+            <div *ngIf="inv.customer_gstin">
+              <span>GSTIN</span><span>{{ inv.customer_gstin }}</span>
+            </div>
           </div>
-          <div class="th-line" *ngIf="inv.customer_phone">Ph: {{ inv.customer_phone }}</div>
-          <div class="th-sep"></div>
 
-          <table class="th-items">
-            <thead>
-              <tr>
-                <th style="text-align:left">Item</th>
-                <th class="right">Qty×Rate</th>
-                <th class="right">Amt</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let it of inv.items">
-                <td>
-                  {{ it.name }}
-                  <div class="mini" *ngIf="it.gst">GST {{ it.gst }}%</div>
-                </td>
-                <td class="right">{{ it.qty }}×{{ it.price }}</td>
-                <td class="right">{{ it.amount | number:'1.2-2' }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="th-sep"></div>
+          <div class="th-hr"></div>
 
-          <div class="th-tot"><span>Sub-total</span><span>{{ inv.subtotal | number:'1.2-2' }}</span></div>
-          <div class="th-tot"><span>GST</span><span>{{ inv.gst_total | number:'1.2-2' }}</span></div>
+          <!-- Two-row item layout: name on line 1, qty×rate + amount on line 2 -->
+          <div class="th-items">
+            <div class="th-item" *ngFor="let it of inv.items; let i = index">
+              <div class="th-item-name">{{ i + 1 }}. {{ it.name }}</div>
+              <div class="th-item-calc">
+                <span class="th-qty">
+                  {{ it.qty }} {{ it.unit || '' }} × {{ it.price | number:'1.2-2' }}
+                  <span class="th-gst" *ngIf="it.gst"> (GST {{ it.gst }}%)</span>
+                </span>
+                <span class="th-amt">{{ it.amount | number:'1.2-2' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="th-hr"></div>
+
+          <div class="th-tot"><span>Sub-total</span><b>{{ inv.subtotal | number:'1.2-2' }}</b></div>
+          <div class="th-tot"><span>GST</span><b>{{ inv.gst_total | number:'1.2-2' }}</b></div>
           <div class="th-tot" *ngIf="inv.discount">
-            <span>Discount</span><span>-{{ inv.discount | number:'1.2-2' }}</span>
+            <span>Discount</span><b>− {{ inv.discount | number:'1.2-2' }}</b>
           </div>
-          <div class="th-sep double"></div>
-          <div class="th-grand"><span>TOTAL ₹</span><span>{{ inv.grand_total | number:'1.2-2' }}</span></div>
-          <div class="th-tot"><span>Payment</span><span>{{ inv.payment_mode }}</span></div>
 
-          <div class="th-sep"></div>
-          <div class="th-foot">{{ shop()?.footer_text || 'Thank you!' }}</div>
+          <div class="th-grand-box">
+            <div class="th-grand-label">GRAND TOTAL</div>
+            <div class="th-grand-val">₹ {{ inv.grand_total | number:'1.2-2' }}</div>
+          </div>
+
+          <div class="th-pay">
+            <div><span>Payment</span><b>{{ inv.payment_mode }}</b></div>
+            <div><span>Items</span><b>{{ inv.items?.length }}</b></div>
+          </div>
+
+          <div class="th-hr"></div>
+
+          <div class="th-foot">
+            <div class="th-thanks">{{ shop()?.footer_text || 'Thank you, visit again!' }}</div>
+            <div class="th-tiny">This is a computer-generated bill.</div>
+          </div>
         </ng-container>
 
         <!-- === A4 === -->
@@ -169,23 +187,50 @@ import { Invoice, PaperSize, ShopSettings } from '../models';
     .invoice-doc.size-a4   { width: 210mm; max-width: 100%; padding: 12mm; }
 
     /* ---------- Thermal (both 58 & 80) ---------- */
-    .invoice-doc.size-58mm { font-size: 10px; line-height: 1.25; }
-    .invoice-doc.size-80mm { font-size: 11px; line-height: 1.3; }
-    .th-head  { text-align: center; }
-    .th-logo  { max-width: 50%; max-height: 22mm; margin-bottom: 2mm; }
-    .th-name  { font-weight: 700; font-size: 1.25em; }
-    .th-line  { text-align: left; }
-    .th-head .th-line { text-align: center; }
-    .th-sep   { border-top: 1px dashed #000; margin: 4px 0; }
-    .th-sep.double { border-top-style: double; }
-    .th-items { width: 100%; border-collapse: collapse; }
-    .th-items th, .th-items td { padding: 1px 0; vertical-align: top; }
-    .th-items .right { text-align: right; }
-    .mini     { font-size: 0.85em; color: #444; }
-    .th-tot   { display: flex; justify-content: space-between; }
-    .th-grand { display: flex; justify-content: space-between;
-                font-weight: 700; font-size: 1.15em; margin: 2px 0; }
-    .th-foot  { text-align: center; margin-top: 4px; font-style: italic; }
+    .invoice-doc.size-58mm { font-size: 10px;   line-height: 1.3; }
+    .invoice-doc.size-80mm { font-size: 11.5px; line-height: 1.35; }
+    .invoice-doc.size-58mm, .invoice-doc.size-80mm { color: #000; }
+
+    .th-head   { text-align: center; margin-bottom: 2mm; }
+    .th-logo   { max-width: 50%; max-height: 16mm; margin: 0 auto 1.5mm; display: block; }
+    .th-name   { font-weight: 800; font-size: 1.4em; letter-spacing: .5px; }
+    .th-sub    { font-size: 0.9em; margin-top: 1px; }
+
+    .th-hr     { border-top: 1px dashed #000; margin: 2mm 0; }
+    .th-badge  {
+      text-align: center; font-weight: 700; letter-spacing: 2px;
+      border: 1px solid #000; padding: 1px 0; margin: 1.5mm 0;
+      font-size: 0.9em;
+    }
+    .th-meta   { display: grid; gap: 1px; }
+    .th-meta > div { display: flex; justify-content: space-between; gap: 6px; }
+    .th-meta > div > :first-child { color: #333; }
+
+    .th-items  { display: flex; flex-direction: column; gap: 1.5mm; }
+    .th-item-name { font-weight: 600; }
+    .th-item-calc { display: flex; justify-content: space-between;
+                    gap: 6px; padding-left: 8px; font-size: 0.95em; }
+    .th-gst    { color: #333; }
+    .th-amt    { font-variant-numeric: tabular-nums; }
+
+    .th-tot    { display: flex; justify-content: space-between;
+                 font-variant-numeric: tabular-nums; }
+
+    .th-grand-box {
+      border-top: 2px solid #000; border-bottom: 2px solid #000;
+      margin: 2mm 0; padding: 1.5mm 0;
+      display: flex; justify-content: space-between; align-items: baseline;
+    }
+    .th-grand-label { font-weight: 800; font-size: 1.05em; letter-spacing: 1px; }
+    .th-grand-val   { font-weight: 800; font-size: 1.3em;
+                      font-variant-numeric: tabular-nums; }
+
+    .th-pay { display: grid; gap: 1px; }
+    .th-pay > div { display: flex; justify-content: space-between; }
+
+    .th-foot   { text-align: center; margin-top: 2mm; }
+    .th-thanks { font-style: italic; font-weight: 600; }
+    .th-tiny   { font-size: 0.8em; color: #333; margin-top: 1mm; }
 
     /* ---------- A4 ---------- */
     .doc-head {

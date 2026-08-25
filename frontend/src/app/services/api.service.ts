@@ -2,7 +2,10 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-import { Customer, DashboardSummary, Invoice, Product } from '../models';
+import {
+  Customer, DashboardSummary, DashboardTrend, Invoice, Product,
+  ReportPeriod, SalesReport,
+} from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -40,4 +43,15 @@ export class ApiService {
   createInvoice(inv: Partial<Invoice>) { return this.http.post<Invoice>(`${this.base}/invoices`, inv); }
   deleteInvoice(id: number) { return this.http.delete<void>(`${this.base}/invoices/${id}`); }
   dashboard() { return this.http.get<DashboardSummary>(`${this.base}/invoices/summary/today`); }
+
+  // Reports
+  salesReport(period: ReportPeriod, from?: string, to?: string) {
+    let params = new HttpParams().set('period', period);
+    if (from) params = params.set('from', from);
+    if (to)   params = params.set('to', to);
+    return this.http.get<SalesReport>(`${this.base}/reports/sales`, { params });
+  }
+  dashboardTrend() {
+    return this.http.get<DashboardTrend>(`${this.base}/reports/dashboard-trend`);
+  }
 }

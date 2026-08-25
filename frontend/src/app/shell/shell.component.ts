@@ -24,6 +24,7 @@ import { AuthService } from '../services/auth.service';
           <a routerLink="/invoices" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Invoices</a>
           <a routerLink="/products" routerLinkActive="active">Products</a>
           <a routerLink="/customers" routerLinkActive="active">Customers</a>
+          <a routerLink="/reports" routerLinkActive="active">Reports</a>
           <a routerLink="/settings" routerLinkActive="active">Settings</a>
         </nav>
 

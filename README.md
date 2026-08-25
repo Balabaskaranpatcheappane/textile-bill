@@ -22,7 +22,12 @@ Features:
 - Printable tax-invoice view — pick **58 mm**, **80 mm** or **A4** and
   print; thermal formats use a compact receipt layout, A4 the full tax
   invoice
-- Dashboard with today's sales, invoice count, low-stock alerts
+- **Dashboard** with today's sales/invoice tiles, a 14-day revenue bar
+  chart, an invoices-per-day line chart, and low-stock alerts
+- **Sales Reports** page: daily / weekly / monthly / yearly / custom date
+  range, with a bar/line graph toggle, summary tiles (total sales,
+  invoice count, average bill), a per-bucket breakdown table, and the
+  top-5 products for the period
 
 ## First-time setup
 

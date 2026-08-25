@@ -11,6 +11,7 @@ const products = require('./routes/products');
 const customers = require('./routes/customers');
 const invoices = require('./routes/invoices');
 const settings = require('./routes/settings');
+const reports = require('./routes/reports');
 
 if (!process.env.JWT_SECRET) {
   console.error('JWT_SECRET is not set. Copy backend/.env.example to .env and set one.');
@@ -72,6 +73,7 @@ app.use('/api/products',  requireAuth, products);
 app.use('/api/customers', requireAuth, customers);
 app.use('/api/invoices',  requireAuth, invoices);
 app.use('/api/settings',  requireAuth, settings);
+app.use('/api/reports',   requireAuth, reports);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

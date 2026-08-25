@@ -81,3 +81,27 @@ export interface DashboardSummary {
   totalSales: number;
   lowStock: Array<Pick<Product, 'id' | 'name' | 'stock' | 'unit'>>;
 }
+
+export type ReportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+
+export interface ReportBucket {
+  bucket: string;
+  sales: number;
+  gst: number;
+  invoices: number;
+}
+
+export interface SalesReport {
+  period: ReportPeriod;
+  from: string;
+  to: string;
+  buckets: ReportBucket[];
+  totals: { sales: number; gst: number; invoices: number; avg_bill: number };
+  topProducts: Array<{ name: string; qty: number; amount: number }>;
+}
+
+export interface DashboardTrend {
+  from: string;
+  to: string;
+  buckets: Array<{ bucket: string; sales: number; invoices: number }>;
+}

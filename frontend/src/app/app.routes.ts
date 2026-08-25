@@ -19,6 +19,7 @@ export const routes: Routes = [
       { path: 'invoices',   loadComponent: () => import('./invoices/invoices.component').then(m => m.InvoicesComponent) },
       { path: 'invoices/new', loadComponent: () => import('./invoices/invoice-create.component').then(m => m.InvoiceCreateComponent) },
       { path: 'invoices/:id', loadComponent: () => import('./invoices/invoice-view.component').then(m => m.InvoiceViewComponent) },
+      { path: 'reports',      loadComponent: () => import('./reports/reports.component').then(m => m.ReportsComponent) },
       { path: 'settings',     loadComponent: () => import('./settings/settings.component').then(m => m.SettingsComponent) },
     ],
   },
