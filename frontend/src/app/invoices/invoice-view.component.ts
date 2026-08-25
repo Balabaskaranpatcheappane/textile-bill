@@ -254,24 +254,25 @@ import { Invoice, PaperSize, ShopSettings } from '../models';
       table-layout: fixed;                    /* columns respect col widths */
       font-variant-numeric: tabular-nums;
     }
-    .th-table col.c-sn    { width: 8%; }
-    .th-table col.c-item  { width: 32%; }
-    .th-table col.c-qty   { width: 12%; }
+    .th-table col.c-sn    { width: 7%; }
+    .th-table col.c-item  { width: 28%; }
+    .th-table col.c-qty   { width: 11%; }
     .th-table col.c-price { width: 22%; }
-    .th-table col.c-amt   { width: 26%; }     /* wider so ₹ + amount fits */
+    .th-table col.c-amt   { width: 32%; }     /* room for ₹ + long amount */
 
     .th-table th, .th-table td {
-      padding: 1.5mm 1mm;
+      padding: 1.2mm 0.8mm;
       vertical-align: top;
-      overflow: hidden;
     }
+    /* Only the wrapping column has overflow control; amount columns must
+       stay fully visible so the last '0' of ₹ 89,250.00 never gets clipped. */
+    .th-table .cell-wrap { overflow-wrap: anywhere; word-break: break-word; }
     .th-table th {
       text-align: left; font-weight: 700;
       border-bottom: 0.75px solid #333;
     }
     .cell-center  { text-align: center; }
     .cell-right   { text-align: right; }
-    .cell-wrap    { word-break: break-word; overflow-wrap: anywhere; }
     .cell-nowrap  { white-space: nowrap; }
     .cell-muted   { color: #333; }
 
@@ -288,9 +289,8 @@ import { Invoice, PaperSize, ShopSettings } from '../models';
     .th-gst-body td { padding: 0.5mm 1mm; }
 
     .th-grand-row td {
-      border-top: 0.75px solid #333;
-      border-bottom: 1.5px solid #333;
-      padding: 2mm 1mm;
+      border-top: 1px solid #333;
+      padding: 1.5mm 0.8mm;
       font-weight: 800;
       font-size: 1.15em;
     }
