@@ -53,54 +53,66 @@ import { Invoice, PaperSize, ShopSettings } from '../models';
             <div class="th-hr solid"></div>
 
             <table class="th-table">
+              <colgroup>
+                <col class="c-sn">
+                <col class="c-item">
+                <col class="c-qty">
+                <col class="c-price">
+                <col class="c-amt">
+              </colgroup>
               <thead>
                 <tr>
-                  <th class="c-sn">SN</th>
-                  <th class="c-item">Item</th>
-                  <th class="c-qty">Qty</th>
-                  <th class="c-price">Price</th>
-                  <th class="c-amt">Amt</th>
+                  <th>SN</th>
+                  <th>Item</th>
+                  <th class="cell-center">Qty</th>
+                  <th class="cell-right">Price</th>
+                  <th class="cell-right">Amt</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="th-items-body">
                 <tr *ngFor="let it of inv.items; let i = index">
-                  <td class="c-sn">{{ i + 1 }}</td>
-                  <td class="c-item">{{ it.name }}</td>
-                  <td class="c-qty">{{ it.qty }}</td>
-                  <td class="c-price">{{ it.price | number:'1.2-2' }}</td>
-                  <td class="c-amt">{{ it.amount | number:'1.2-2' }}</td>
+                  <td>{{ i + 1 }}</td>
+                  <td class="cell-wrap">{{ it.name }}</td>
+                  <td class="cell-center">{{ it.qty }}</td>
+                  <td class="cell-right">{{ it.price | number:'1.2-2' }}</td>
+                  <td class="cell-right cell-nowrap">{{ it.amount | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+
+              <!-- Subtotal aligned to same columns as items -->
+              <tbody class="th-subtotal-body">
+                <tr class="th-subtotal-row">
+                  <td></td>
+                  <td><b>Subtotal</b></td>
+                  <td class="cell-center"><b>{{ totalItems() }}</b></td>
+                  <td></td>
+                  <td class="cell-right cell-nowrap"><b>₹&nbsp;{{ inv.subtotal | number:'1.2-2' }}</b></td>
+                </tr>
+              </tbody>
+
+              <!-- GST-by-rate + discount, right-aligned across last two columns -->
+              <tbody class="th-gst-body" *ngIf="gstByRate().length || inv.discount">
+                <tr *ngFor="let g of gstByRate(); let first = first" [class.first-row]="first">
+                  <td colspan="3"></td>
+                  <td class="cell-right cell-muted">{{ gstLabel }} at {{ g.rate }}%</td>
+                  <td class="cell-right cell-nowrap">{{ g.amount | number:'1.2-2' }}</td>
+                </tr>
+                <tr *ngIf="inv.discount" [class.first-row]="gstByRate().length === 0">
+                  <td colspan="3"></td>
+                  <td class="cell-right cell-muted">Discount</td>
+                  <td class="cell-right cell-nowrap">− {{ inv.discount | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+
+              <!-- Grand total -->
+              <tbody class="th-grand-body">
+                <tr class="th-grand-row">
+                  <td colspan="3"><b>TOTAL</b></td>
+                  <td></td>
+                  <td class="cell-right cell-nowrap"><b>₹&nbsp;{{ inv.grand_total | number:'1.2-2' }}</b></td>
                 </tr>
               </tbody>
             </table>
-
-            <div class="th-hr solid"></div>
-
-            <div class="th-subtotal">
-              <span class="l">Subtotal</span>
-              <span class="q">{{ totalItems() }}</span>
-              <span class="p"></span>
-              <span class="a">₹ {{ inv.subtotal | number:'1.2-2' }}</span>
-            </div>
-
-            <div class="th-hr solid"></div>
-
-            <div class="th-gst-block">
-              <div class="th-gst-row" *ngFor="let g of gstByRate()">
-                <span>{{ gstLabel }} at {{ g.rate }}%</span>
-                <span>{{ g.amount | number:'1.2-2' }}</span>
-              </div>
-              <div class="th-gst-row" *ngIf="inv.discount">
-                <span>Discount</span>
-                <span>− {{ inv.discount | number:'1.2-2' }}</span>
-              </div>
-            </div>
-
-            <div class="th-hr solid"></div>
-
-            <div class="th-grand">
-              <span>TOTAL</span>
-              <span>₹ {{ inv.grand_total | number:'1.2-2' }}</span>
-            </div>
 
             <div class="th-hr dashed-lg"></div>
 
@@ -236,56 +248,51 @@ import { Invoice, PaperSize, ShopSettings } from '../models';
     }
 
     /* --- item grid: SN | Item | Qty | Price | Amt --- */
-    .th-table  { width: 100%; border-collapse: collapse;
-                 font-variant-numeric: tabular-nums; }
+    .th-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;                    /* columns respect col widths */
+      font-variant-numeric: tabular-nums;
+    }
+    .th-table col.c-sn    { width: 8%; }
+    .th-table col.c-item  { width: 32%; }
+    .th-table col.c-qty   { width: 12%; }
+    .th-table col.c-price { width: 22%; }
+    .th-table col.c-amt   { width: 26%; }     /* wider so ₹ + amount fits */
+
     .th-table th, .th-table td {
       padding: 1.5mm 1mm;
       vertical-align: top;
+      overflow: hidden;
     }
     .th-table th {
       text-align: left; font-weight: 700;
-      border-bottom: 0.5px solid #666;
+      border-bottom: 0.75px solid #333;
     }
-    .th-table .c-sn    { width: 8%; }
-    .th-table .c-item  { width: 40%; word-break: break-word; }
-    .th-table .c-qty   { width: 10%; text-align: center; }
-    .th-table .c-price { width: 21%; text-align: right; }
-    .th-table .c-amt   { width: 21%; text-align: right; font-weight: 600; }
-    .th-table th.c-qty, .th-table th.c-price, .th-table th.c-amt {
-      text-align: inherit;
-    }
-    .th-table th.c-qty   { text-align: center; }
-    .th-table th.c-price { text-align: right; }
-    .th-table th.c-amt   { text-align: right; }
+    .cell-center  { text-align: center; }
+    .cell-right   { text-align: right; }
+    .cell-wrap    { word-break: break-word; overflow-wrap: anywhere; }
+    .cell-nowrap  { white-space: nowrap; }
+    .cell-muted   { color: #333; }
 
-    /* --- Subtotal row: label, item count, blank, amount --- */
-    .th-subtotal {
-      display: grid;
-      grid-template-columns: 48% 10% 21% 21%;
-      align-items: center;
+    /* Section borders inside the same table so every column stays aligned */
+    .th-subtotal-row td {
+      border-top: 0.75px solid #333;
+      padding-top: 2mm;
       font-weight: 700;
-      padding: 1mm 1mm;
-      font-variant-numeric: tabular-nums;
     }
-    .th-subtotal .l { text-align: left; }
-    .th-subtotal .q { text-align: center; }
-    .th-subtotal .a { text-align: right; }
-
-    /* --- Per-rate GST block, right aligned --- */
-    .th-gst-block { padding: 1mm 1mm; }
-    .th-gst-row {
-      display: flex; justify-content: flex-end; gap: 6mm;
-      padding: 0.5mm 0;
-      font-variant-numeric: tabular-nums;
+    .th-gst-body tr.first-row td {
+      border-top: 0.75px solid #333;
+      padding-top: 1.5mm;
     }
-    .th-gst-row > :first-child { color: #333; }
+    .th-gst-body td { padding: 0.5mm 1mm; }
 
-    /* --- Grand total --- */
-    .th-grand {
-      display: flex; justify-content: space-between; align-items: baseline;
-      font-weight: 800; font-size: 1.15em;
-      padding: 1mm 1mm;
-      font-variant-numeric: tabular-nums;
+    .th-grand-row td {
+      border-top: 0.75px solid #333;
+      border-bottom: 1.5px solid #333;
+      padding: 2mm 1mm;
+      font-weight: 800;
+      font-size: 1.15em;
     }
 
     .th-foot {
