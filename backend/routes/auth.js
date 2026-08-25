@@ -58,15 +58,15 @@ router.get('/users', requireAuth, requireRole('admin'), async (_req, res, next) 
 
 router.post('/users', requireAuth, requireRole('admin'), async (req, res, next) => {
   try {
-    const { username, password, name, role = 'staff' } = req.body || {};
+    const { username, password, name, role = 'cashier' } = req.body || {};
     if (!username || !password || !name) {
       return res.status(400).json({ error: 'username, password and name are required' });
     }
     if (password.length < 6) {
       return res.status(400).json({ error: 'password must be at least 6 characters' });
     }
-    if (!['admin', 'staff'].includes(role)) {
-      return res.status(400).json({ error: "role must be 'admin' or 'staff'" });
+    if (!['admin', 'cashier'].includes(role)) {
+      return res.status(400).json({ error: "role must be 'admin' or 'cashier'" });
     }
     const hash = await bcrypt.hash(password, 10);
     try {
@@ -83,6 +83,46 @@ router.post('/users', requireAuth, requireRole('admin'), async (req, res, next) 
     }
   } catch (e) { next(e); }
 });
+
+router.put('/users/:id', requireAuth, requireRole('admin'), async (req, res, next) => {
+  try {
+    const { name, role } = req.body || {};
+    if (role && !['admin', 'cashier'].includes(role)) {
+      return res.status(400).json({ error: "role must be 'admin' or 'cashier'" });
+    }
+    // Guard: don't let the last admin be demoted.
+    if (+req.params.id === req.user.id && role && role !== 'admin') {
+      return res.status(400).json({ error: 'You cannot demote your own admin account' });
+    }
+    const { rows } = await pool.query(
+      `UPDATE users SET
+         name = COALESCE($1, name),
+         role = COALESCE($2, role)
+       WHERE id = $3
+       RETURNING id, username, name, role, created_at, last_login`,
+      [name, role, req.params.id],
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+    res.json(rows[0]);
+  } catch (e) { next(e); }
+});
+
+router.post('/users/:id/reset-password', requireAuth, requireRole('admin'),
+  async (req, res, next) => {
+    try {
+      const { new_password } = req.body || {};
+      if (!new_password || new_password.length < 6) {
+        return res.status(400).json({ error: 'new_password must be at least 6 characters' });
+      }
+      const hash = await bcrypt.hash(new_password, 10);
+      const { rowCount } = await pool.query(
+        'UPDATE users SET password_hash = $1 WHERE id = $2',
+        [hash, req.params.id],
+      );
+      if (rowCount === 0) return res.status(404).json({ error: 'User not found' });
+      res.json({ ok: true });
+    } catch (e) { next(e); }
+  });
 
 router.delete('/users/:id', requireAuth, requireRole('admin'), async (req, res, next) => {
   try {

@@ -10,6 +10,10 @@ A simple billing system for a textiles shop, built with:
 Features:
 
 - Login screen; JWT stored in `localStorage`; auto-logout on 401
+- **Multi-user with roles**: admin (full access) and cashier (can add
+  products, add customers, create invoices, view reports); admin-only
+  Users page for creating and managing cashiers, and a Profile page
+  for changing your own password
 - **Shop settings** page (admin-only): shop name, address, phone, email,
   GSTIN, uploadable logo, default paper size, invoice-number prefix,
   footer note

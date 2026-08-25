@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { ApiService } from '../services/api.service';
+import { AuthService } from '../services/auth.service';
 import { Product } from '../models';
 
 @Component({
@@ -80,7 +81,7 @@ import { Product } from '../models';
               <a *ngIf="p.barcode" class="btn secondary"
                  [routerLink]="['/products', p.id, 'barcode']">Label</a>
               <button class="secondary" style="margin-left:6px" (click)="edit(p)">Edit</button>
-              <button class="danger" style="margin-left:6px" (click)="remove(p)">Delete</button>
+              <button *ngIf="auth.isAdmin()" class="danger" style="margin-left:6px" (click)="remove(p)">Delete</button>
             </td>
           </tr>
           <tr *ngIf="products().length === 0">
@@ -101,6 +102,7 @@ import { Product } from '../models';
 })
 export class ProductsComponent implements OnInit {
   private api = inject(ApiService);
+  auth = inject(AuthService);
   products = signal<Product[]>([]);
   editing = signal<Partial<Product> | null>(null);
   query = '';

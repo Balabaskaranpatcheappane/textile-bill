@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { pool } = require('../db');
+const { requireRole } = require('../middleware/auth');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -62,7 +63,7 @@ router.put('/:id', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const { rowCount } = await pool.query('DELETE FROM customers WHERE id = $1', [req.params.id]);
     if (rowCount === 0) return res.status(404).json({ error: 'Customer not found' });

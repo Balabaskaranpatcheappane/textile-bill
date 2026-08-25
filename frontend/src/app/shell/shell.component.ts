@@ -25,12 +25,15 @@ import { AuthService } from '../services/auth.service';
           <a routerLink="/products" routerLinkActive="active">Products</a>
           <a routerLink="/customers" routerLinkActive="active">Customers</a>
           <a routerLink="/reports" routerLinkActive="active">Reports</a>
-          <a routerLink="/settings" routerLinkActive="active">Settings</a>
+          <a *ngIf="auth.isAdmin()" routerLink="/users" routerLinkActive="active">Users</a>
+          <a *ngIf="auth.isAdmin()" routerLink="/settings" routerLinkActive="active">Settings</a>
         </nav>
 
         <div class="user-box" *ngIf="auth.user() as u">
-          <div class="user-name">{{ u.name }}</div>
-          <div class="user-sub">{{ u.username }} · {{ u.role }}</div>
+          <a routerLink="/profile" class="user-link">
+            <div class="user-name">{{ u.name }}</div>
+            <div class="user-sub">{{ u.username }} · {{ u.role }}</div>
+          </a>
           <button class="secondary" style="margin-top:8px; width:100%" (click)="auth.logout()">
             Sign out
           </button>
@@ -65,6 +68,9 @@ import { AuthService } from '../services/auth.service';
       margin-top: auto; padding: 12px; background: #1f2937; border-radius: 8px;
       font-size: 12px;
     }
+    .user-link { display: block; color: inherit; text-decoration: none;
+                 padding: 2px 0; border-radius: 4px; }
+    .user-link:hover { text-decoration: none; }
     .user-name { font-weight: 600; color: #fff; font-size: 13px; }
     .user-sub { color: #9ca3af; margin-top: 2px; }
 

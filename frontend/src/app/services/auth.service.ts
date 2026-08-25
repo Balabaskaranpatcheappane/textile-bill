@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs';
 
-import { LoginResponse, User } from '../models';
+import { AppUser, LoginResponse, User, UserRole } from '../models';
 
 const TOKEN_KEY = 'textiles.token';
 const USER_KEY = 'textiles.user';
@@ -18,6 +18,7 @@ export class AuthService {
 
   readonly user = this._user.asReadonly();
   readonly isAuthenticated = computed(() => !!this._token());
+  readonly isAdmin = computed(() => this._user()?.role === 'admin');
 
   private restoreUser(): User | null {
     try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); }
@@ -48,5 +49,23 @@ export class AuthService {
   changePassword(current_password: string, new_password: string) {
     return this.http.post<{ ok: true }>('/api/auth/change-password',
       { current_password, new_password });
+  }
+
+  // ----- Admin: user management -----
+  listUsers() {
+    return this.http.get<AppUser[]>('/api/auth/users');
+  }
+  createUser(body: { username: string; password: string; name: string; role: UserRole }) {
+    return this.http.post<AppUser>('/api/auth/users', body);
+  }
+  updateUser(id: number, body: { name?: string; role?: UserRole }) {
+    return this.http.put<AppUser>(`/api/auth/users/${id}`, body);
+  }
+  resetUserPassword(id: number, new_password: string) {
+    return this.http.post<{ ok: true }>(`/api/auth/users/${id}/reset-password`,
+      { new_password });
+  }
+  deleteUser(id: number) {
+    return this.http.delete<void>(`/api/auth/users/${id}`);
   }
 }

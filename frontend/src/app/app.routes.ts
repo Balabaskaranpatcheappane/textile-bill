@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard } from './auth.guard';
+import { adminGuard, authGuard } from './auth.guard';
 
 export const routes: Routes = [
   {
@@ -21,6 +21,12 @@ export const routes: Routes = [
       { path: 'invoices/:id', loadComponent: () => import('./invoices/invoice-view.component').then(m => m.InvoiceViewComponent) },
       { path: 'reports',      loadComponent: () => import('./reports/reports.component').then(m => m.ReportsComponent) },
       { path: 'settings',     loadComponent: () => import('./settings/settings.component').then(m => m.SettingsComponent) },
+      { path: 'profile',      loadComponent: () => import('./profile/profile.component').then(m => m.ProfileComponent) },
+      {
+        path: 'users',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./users/users.component').then(m => m.UsersComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

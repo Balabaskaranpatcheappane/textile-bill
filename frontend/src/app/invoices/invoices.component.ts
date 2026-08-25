@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { ApiService } from '../services/api.service';
+import { AuthService } from '../services/auth.service';
 import { Invoice } from '../models';
 
 @Component({
@@ -38,7 +39,7 @@ import { Invoice } from '../models';
             <td class="right">{{ inv.grand_total | currency:'INR':'symbol':'1.2-2' }}</td>
             <td class="right">
               <a class="btn secondary" [routerLink]="['/invoices', inv.id]">View</a>
-              <button class="danger" style="margin-left:6px" (click)="remove(inv)">Delete</button>
+              <button *ngIf="auth.isAdmin()" class="danger" style="margin-left:6px" (click)="remove(inv)">Delete</button>
             </td>
           </tr>
           <tr *ngIf="invoices().length === 0">
@@ -53,6 +54,7 @@ import { Invoice } from '../models';
 })
 export class InvoicesComponent implements OnInit {
   private api = inject(ApiService);
+  auth = inject(AuthService);
   invoices = signal<Invoice[]>([]);
   query = '';
 

@@ -9,3 +9,11 @@ export const authGuard: CanActivateFn = () => {
   if (auth.isAuthenticated()) return true;
   return router.createUrlTree(['/login']);
 };
+
+export const adminGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  if (!auth.isAuthenticated()) return router.createUrlTree(['/login']);
+  if (!auth.isAdmin())         return router.createUrlTree(['/']);
+  return true;
+};

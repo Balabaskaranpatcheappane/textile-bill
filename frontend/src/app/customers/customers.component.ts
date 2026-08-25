@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { ApiService } from '../services/api.service';
+import { AuthService } from '../services/auth.service';
 import { Customer } from '../models';
 
 @Component({
@@ -47,7 +48,7 @@ import { Customer } from '../models';
             <td>{{ c.address || '—' }}</td>
             <td class="right">
               <button class="secondary" (click)="edit(c)">Edit</button>
-              <button class="danger" style="margin-left:6px" (click)="remove(c)">Delete</button>
+              <button *ngIf="auth.isAdmin()" class="danger" style="margin-left:6px" (click)="remove(c)">Delete</button>
             </td>
           </tr>
           <tr *ngIf="customers().length === 0">
@@ -62,6 +63,7 @@ import { Customer } from '../models';
 })
 export class CustomersComponent implements OnInit {
   private api = inject(ApiService);
+  auth = inject(AuthService);
   customers = signal<Customer[]>([]);
   editing = signal<Partial<Customer> | null>(null);
   query = '';

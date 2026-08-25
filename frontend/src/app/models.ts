@@ -48,11 +48,18 @@ export interface Invoice {
   created_at?: string;
 }
 
+export type UserRole = 'admin' | 'cashier';
+
 export interface User {
   id: number;
   username: string;
   name: string;
-  role: 'admin' | 'staff';
+  role: UserRole;
+}
+
+export interface AppUser extends User {
+  created_at: string;
+  last_login?: string | null;
 }
 
 export interface LoginResponse {

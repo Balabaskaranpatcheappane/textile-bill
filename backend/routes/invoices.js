@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { pool } = require('../db');
+const { requireRole } = require('../middleware/auth');
 
 // An arbitrary but stable key so concurrent invoice creations serialize on
 // their own advisory lock instead of blocking every write in the app.
@@ -173,7 +174,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const { rowCount } = await pool.query('DELETE FROM invoices WHERE id = $1', [req.params.id]);
     if (rowCount === 0) return res.status(404).json({ error: 'Invoice not found' });
