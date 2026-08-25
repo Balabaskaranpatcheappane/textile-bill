@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const { pool } = require('../db');
 
+// Bucket expression per period. Referenced by position in GROUP BY so we
+// don't depend on GROUP-BY-alias support.
 const BUCKET_EXPR = {
   daily:   `to_char(i.invoice_date, 'YYYY-MM-DD')`,
   weekly:  `to_char(date_trunc('week',  i.invoice_date), 'IYYY-"W"IW')`,
@@ -37,12 +39,13 @@ router.get('/sales', async (req, res, next) => {
 
     const bucketSql = BUCKET_EXPR[period] || BUCKET_EXPR.daily;
 
-    // Per-bucket: sales, gst, invoices, items_sold (sum of qty across all lines).
+    // Per-bucket totals. items_sold is joined in via a per-invoice aggregate
+    // so we don't multiply invoice rows by line-item rows.
     const { rows: buckets } = await pool.query(
       `SELECT ${bucketSql} AS bucket,
               COALESCE(SUM(i.grand_total), 0)::float AS sales,
               COALESCE(SUM(i.gst_total),   0)::float AS gst,
-              COUNT(i.*)::int                        AS invoices,
+              COUNT(*)::int                          AS invoices,
               COALESCE(SUM(ii_totals.items_sold), 0)::float AS items_sold
          FROM invoices i
          LEFT JOIN (
@@ -51,16 +54,15 @@ router.get('/sales', async (req, res, next) => {
             GROUP BY invoice_id
          ) ii_totals ON ii_totals.invoice_id = i.id
         WHERE i.invoice_date BETWEEN $1::date AND $2::date
-        GROUP BY bucket
-        ORDER BY bucket`,
+        GROUP BY 1
+        ORDER BY 1`,
       [from, to],
     );
 
-    // Totals row for the grid footer + summary tiles.
     const { rows: totalRows } = await pool.query(
       `SELECT COALESCE(SUM(i.grand_total), 0)::float AS sales,
               COALESCE(SUM(i.gst_total),   0)::float AS gst,
-              COUNT(i.*)::int                        AS invoices,
+              COUNT(*)::int                          AS invoices,
               COALESCE(SUM(ii_totals.items_sold), 0)::float AS items_sold
          FROM invoices i
          LEFT JOIN (
@@ -70,14 +72,19 @@ router.get('/sales', async (req, res, next) => {
         WHERE i.invoice_date BETWEEN $1::date AND $2::date`,
       [from, to],
     );
-    const t = totalRows[0];
-    const totals = { ...t, avg_bill: t.invoices ? t.sales / t.invoices : 0 };
+    const t = totalRows[0] || { sales: 0, gst: 0, invoices: 0, items_sold: 0 };
+    const totals = {
+      sales:      +t.sales      || 0,
+      gst:        +t.gst        || 0,
+      invoices:   +t.invoices   || 0,
+      items_sold: +t.items_sold || 0,
+      avg_bill:   t.invoices ? (+t.sales || 0) / +t.invoices : 0,
+    };
 
-    // GST amount grouped by rate (0%, 5%, 12%, 18%, 28%).
     const { rows: gstByRate } = await pool.query(
       `SELECT ii.gst::float AS rate,
               COALESCE(SUM((ii.qty * ii.price * ii.gst) / 100), 0)::float AS amount,
-              SUM(ii.qty * ii.price)::float AS taxable
+              COALESCE(SUM(ii.qty * ii.price), 0)::float               AS taxable
          FROM invoice_items ii
          JOIN invoices i ON i.id = ii.invoice_id
         WHERE i.invoice_date BETWEEN $1::date AND $2::date
@@ -86,7 +93,6 @@ router.get('/sales', async (req, res, next) => {
       [from, to],
     );
 
-    // Top-5 products in the same window.
     const { rows: topProducts } = await pool.query(
       `SELECT ii.name,
               SUM(ii.qty)::float    AS qty,
@@ -101,7 +107,10 @@ router.get('/sales', async (req, res, next) => {
     );
 
     res.json({ period, from, to, buckets, totals, gstByRate, topProducts });
-  } catch (e) { next(e); }
+  } catch (e) {
+    console.error('reports/sales failed:', e.message);
+    next(e);
+  }
 });
 
 router.get('/dashboard-trend', async (_req, res, next) => {
@@ -114,8 +123,8 @@ router.get('/dashboard-trend', async (_req, res, next) => {
               COUNT(*)::int AS invoices
          FROM invoices
         WHERE invoice_date BETWEEN $1::date AND $2::date
-        GROUP BY bucket
-        ORDER BY bucket`,
+        GROUP BY 1
+        ORDER BY 1`,
       [from, to],
     );
     const byBucket = new Map(rows.map((r) => [r.bucket, r]));
@@ -126,7 +135,10 @@ router.get('/dashboard-trend', async (_req, res, next) => {
       filled.push({ bucket: key, sales: r ? r.sales : 0, invoices: r ? r.invoices : 0 });
     }
     res.json({ from, to, buckets: filled });
-  } catch (e) { next(e); }
+  } catch (e) {
+    console.error('reports/dashboard-trend failed:', e.message);
+    next(e);
+  }
 });
 
 module.exports = router;

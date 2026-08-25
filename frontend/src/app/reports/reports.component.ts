@@ -45,6 +45,15 @@ import { ReportPeriod, SalesReport } from '../models';
       </div>
     </div>
 
+    <div *ngIf="loading()" class="panel" style="text-align:center; color:var(--muted)">
+      Loading report…
+    </div>
+
+    <div *ngIf="err()" class="panel err">
+      Could not load report: {{ err() }}.
+      <button class="secondary" style="margin-left:8px" (click)="run()">Retry</button>
+    </div>
+
     <ng-container *ngIf="report() as r">
       <!-- ---------- KPI tiles ---------- -->
       <div class="tiles" style="margin-bottom:12px">
@@ -192,6 +201,7 @@ import { ReportPeriod, SalesReport } from '../models';
     .chart-toggle button + button { margin-left: 4px; }
     .muted { color: var(--muted); font-size: 12px; }
     .empty { text-align: center; color: var(--muted); padding: 16px; }
+    .err   { background: #fee2e2; color: #991b1b; }
 
     /* ---------- data grid ---------- */
     .grid-wrap { overflow-x: auto; max-height: 60vh; overflow-y: auto; border-radius: 8px; }
@@ -230,6 +240,8 @@ export class ReportsComponent implements OnInit {
 
   report = signal<SalesReport | null>(null);
   chartType = signal<'bar' | 'line'>('bar');
+  loading = signal(false);
+  err = signal<string | null>(null);
 
   chartData = computed<ChartPoint[]>(() => {
     const r = this.report();
@@ -250,7 +262,15 @@ export class ReportsComponent implements OnInit {
   }
 
   run() {
-    this.api.salesReport(this.period, this.from, this.to).subscribe((r) => this.report.set(r));
+    this.loading.set(true);
+    this.err.set(null);
+    this.api.salesReport(this.period, this.from, this.to).subscribe({
+      next: (r) => { this.report.set(r); this.loading.set(false); },
+      error: (e) => {
+        this.loading.set(false);
+        this.err.set(e?.error?.error || e?.message || 'Server error');
+      },
+    });
   }
 
   avgBill(b: { sales: number; invoices: number }) {
