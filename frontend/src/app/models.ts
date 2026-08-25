@@ -45,6 +45,7 @@ export interface Invoice {
   payment_mode: string;
   notes?: string | null;
   items?: InvoiceItem[];
+  created_at?: string;
 }
 
 export interface User {

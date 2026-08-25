@@ -52,8 +52,10 @@ import { PaperSize, ShopSettings } from '../models';
             </div>
           </div>
 
-          <label>Footer note (shown on bills)</label>
-          <input [(ngModel)]="f.footer_text" [disabled]="!isAdmin()">
+          <label>Footer text (shown at the bottom of every bill)</label>
+          <textarea rows="3" [(ngModel)]="f.footer_text" [disabled]="!isAdmin()"
+                    placeholder="Thank You! Visit Again.&#10;Goods once sold cannot be exchanged or returned."></textarea>
+          <p class="muted">One line per row — appears centered under the total.</p>
         </div>
 
         <div class="panel">
