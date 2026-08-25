@@ -89,6 +89,13 @@ export interface ReportBucket {
   sales: number;
   gst: number;
   invoices: number;
+  items_sold: number;
+}
+
+export interface GstByRate {
+  rate: number;
+  amount: number;
+  taxable: number;
 }
 
 export interface SalesReport {
@@ -96,7 +103,8 @@ export interface SalesReport {
   from: string;
   to: string;
   buckets: ReportBucket[];
-  totals: { sales: number; gst: number; invoices: number; avg_bill: number };
+  totals: { sales: number; gst: number; invoices: number; items_sold: number; avg_bill: number };
+  gstByRate: GstByRate[];
   topProducts: Array<{ name: string; qty: number; amount: number }>;
 }
 

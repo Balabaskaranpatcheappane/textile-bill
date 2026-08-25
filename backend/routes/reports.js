@@ -1,30 +1,25 @@
 const router = require('express').Router();
 const { pool } = require('../db');
 
-// SQL fragment producing the bucket label for each period. Postgres
-// TO_CHAR / DATE_TRUNC give us stable, comparable bucket keys we can
-// sort lexicographically.
 const BUCKET_EXPR = {
-  daily:   `to_char(invoice_date, 'YYYY-MM-DD')`,
-  weekly:  `to_char(date_trunc('week',  invoice_date), 'IYYY-"W"IW')`,
-  monthly: `to_char(date_trunc('month', invoice_date), 'YYYY-MM')`,
-  yearly:  `to_char(date_trunc('year',  invoice_date), 'YYYY')`,
+  daily:   `to_char(i.invoice_date, 'YYYY-MM-DD')`,
+  weekly:  `to_char(date_trunc('week',  i.invoice_date), 'IYYY-"W"IW')`,
+  monthly: `to_char(date_trunc('month', i.invoice_date), 'YYYY-MM')`,
+  yearly:  `to_char(date_trunc('year',  i.invoice_date), 'YYYY')`,
 };
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
-
 function shiftISO(days) {
   const d = new Date();
   d.setDate(d.getDate() - days);
   return d.toISOString().slice(0, 10);
 }
 
-// Default window sizes per period.
 const DEFAULT_WINDOW = {
-  daily:   14,           // last 14 days
-  weekly:  7 * 12,       // last ~12 weeks
-  monthly: 30 * 12,      // last ~12 months
-  yearly:  365 * 5,      // last ~5 years
+  daily:   14,
+  weekly:  7 * 12,
+  monthly: 30 * 12,
+  yearly:  365 * 5,
 };
 
 router.get('/sales', async (req, res, next) => {
@@ -33,8 +28,6 @@ router.get('/sales', async (req, res, next) => {
     if (!['daily', 'weekly', 'monthly', 'yearly', 'custom'].includes(period)) {
       return res.status(400).json({ error: 'invalid period' });
     }
-
-    // Resolve the date window.
     if (period === 'custom') {
       if (!from || !to) return res.status(400).json({ error: 'from and to required for custom' });
     } else {
@@ -42,37 +35,58 @@ router.get('/sales', async (req, res, next) => {
       from = shiftISO(DEFAULT_WINDOW[period]);
     }
 
-    // Custom always buckets by day.
     const bucketSql = BUCKET_EXPR[period] || BUCKET_EXPR.daily;
 
+    // Per-bucket: sales, gst, invoices, items_sold (sum of qty across all lines).
     const { rows: buckets } = await pool.query(
       `SELECT ${bucketSql} AS bucket,
-              COALESCE(SUM(grand_total), 0)::float AS sales,
-              COALESCE(SUM(gst_total),   0)::float AS gst,
-              COUNT(*)::int AS invoices
-         FROM invoices
-        WHERE invoice_date BETWEEN $1::date AND $2::date
+              COALESCE(SUM(i.grand_total), 0)::float AS sales,
+              COALESCE(SUM(i.gst_total),   0)::float AS gst,
+              COUNT(i.*)::int                        AS invoices,
+              COALESCE(SUM(ii_totals.items_sold), 0)::float AS items_sold
+         FROM invoices i
+         LEFT JOIN (
+           SELECT invoice_id, SUM(qty) AS items_sold
+             FROM invoice_items
+            GROUP BY invoice_id
+         ) ii_totals ON ii_totals.invoice_id = i.id
+        WHERE i.invoice_date BETWEEN $1::date AND $2::date
         GROUP BY bucket
         ORDER BY bucket`,
       [from, to],
     );
 
-    // Grand totals for the summary tiles.
+    // Totals row for the grid footer + summary tiles.
     const { rows: totalRows } = await pool.query(
-      `SELECT COALESCE(SUM(grand_total), 0)::float AS sales,
-              COALESCE(SUM(gst_total),   0)::float AS gst,
-              COUNT(*)::int                          AS invoices
-         FROM invoices
-        WHERE invoice_date BETWEEN $1::date AND $2::date`,
+      `SELECT COALESCE(SUM(i.grand_total), 0)::float AS sales,
+              COALESCE(SUM(i.gst_total),   0)::float AS gst,
+              COUNT(i.*)::int                        AS invoices,
+              COALESCE(SUM(ii_totals.items_sold), 0)::float AS items_sold
+         FROM invoices i
+         LEFT JOIN (
+           SELECT invoice_id, SUM(qty) AS items_sold
+             FROM invoice_items GROUP BY invoice_id
+         ) ii_totals ON ii_totals.invoice_id = i.id
+        WHERE i.invoice_date BETWEEN $1::date AND $2::date`,
       [from, to],
     );
     const t = totalRows[0];
-    const totals = {
-      ...t,
-      avg_bill: t.invoices ? t.sales / t.invoices : 0,
-    };
+    const totals = { ...t, avg_bill: t.invoices ? t.sales / t.invoices : 0 };
 
-    // Top products (limit 5) in the same window.
+    // GST amount grouped by rate (0%, 5%, 12%, 18%, 28%).
+    const { rows: gstByRate } = await pool.query(
+      `SELECT ii.gst::float AS rate,
+              COALESCE(SUM((ii.qty * ii.price * ii.gst) / 100), 0)::float AS amount,
+              SUM(ii.qty * ii.price)::float AS taxable
+         FROM invoice_items ii
+         JOIN invoices i ON i.id = ii.invoice_id
+        WHERE i.invoice_date BETWEEN $1::date AND $2::date
+        GROUP BY ii.gst
+        ORDER BY ii.gst`,
+      [from, to],
+    );
+
+    // Top-5 products in the same window.
     const { rows: topProducts } = await pool.query(
       `SELECT ii.name,
               SUM(ii.qty)::float    AS qty,
@@ -86,14 +100,14 @@ router.get('/sales', async (req, res, next) => {
       [from, to],
     );
 
-    res.json({ period, from, to, buckets, totals, topProducts });
+    res.json({ period, from, to, buckets, totals, gstByRate, topProducts });
   } catch (e) { next(e); }
 });
 
 router.get('/dashboard-trend', async (_req, res, next) => {
   try {
     const to   = todayISO();
-    const from = shiftISO(13); // last 14 days including today
+    const from = shiftISO(13);
     const { rows } = await pool.query(
       `SELECT to_char(invoice_date, 'YYYY-MM-DD') AS bucket,
               COALESCE(SUM(grand_total), 0)::float AS sales,
@@ -104,8 +118,6 @@ router.get('/dashboard-trend', async (_req, res, next) => {
         ORDER BY bucket`,
       [from, to],
     );
-
-    // Fill in missing days so the chart is continuous.
     const byBucket = new Map(rows.map((r) => [r.bucket, r]));
     const filled = [];
     for (let i = 13; i >= 0; i--) {
