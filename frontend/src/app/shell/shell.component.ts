@@ -14,7 +14,7 @@ interface MenuItem {
 }
 
 const MENU: MenuItem[] = [
-  { path: '/',             label: 'Dashboard',   icon: '📊', roles: ['admin', 'cashier'], exact: true },
+  { path: '/',             label: 'Dashboard',   icon: '📊', roles: ['admin'], exact: true },
   { path: '/invoices/new', label: 'New Invoice', icon: '🧾', roles: ['admin', 'cashier'] },
   { path: '/invoices',     label: 'Invoices',    icon: '📄', roles: ['admin', 'cashier'], exact: true },
   { path: '/products',     label: 'Products',    icon: '🧵', roles: ['admin', 'cashier'] },

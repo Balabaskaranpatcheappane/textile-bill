@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { AuthService } from '../services/auth.service';
+import { homeFor } from '../auth.guard';
 
 @Component({
   selector: 'app-login',
@@ -71,7 +72,10 @@ export class LoginComponent {
     this.busy.set(true);
     this.error.set(null);
     this.auth.login(this.username, this.password).subscribe({
-      next: () => { this.busy.set(false); this.router.navigate(['/']); },
+      next: (res) => {
+        this.busy.set(false);
+        this.router.navigateByUrl(homeFor(res.user.role));
+      },
       error: (e) => {
         this.busy.set(false);
         this.error.set(e?.error?.error || 'Sign-in failed');

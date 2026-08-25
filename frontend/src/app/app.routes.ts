@@ -12,7 +12,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./shell/shell.component').then(m => m.ShellComponent),
     children: [
-      { path: '',           loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent) },
+      {
+        path: '',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent),
+      },
       { path: 'products',   loadComponent: () => import('./products/products.component').then(m => m.ProductsComponent) },
       { path: 'products/:id/barcode', loadComponent: () => import('./products/barcode.component').then(m => m.BarcodeComponent) },
       { path: 'customers',  loadComponent: () => import('./customers/customers.component').then(m => m.CustomersComponent) },
