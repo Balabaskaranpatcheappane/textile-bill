@@ -1,0 +1,22 @@
+<div class="shell">
+  <aside class="sidebar no-print">
+    <div class="brand">
+      <span class="logo">🧵</span>
+      <div>
+        <div class="brand-name">Textiles</div>
+        <div class="brand-sub">Billing</div>
+      </div>
+    </div>
+    <nav>
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Dashboard</a>
+      <a routerLink="/invoices/new" routerLinkActive="active">New Invoice</a>
+      <a routerLink="/invoices" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Invoices</a>
+      <a routerLink="/products" routerLinkActive="active">Products</a>
+      <a routerLink="/customers" routerLinkActive="active">Customers</a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>
