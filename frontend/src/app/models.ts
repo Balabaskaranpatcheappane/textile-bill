@@ -59,6 +59,22 @@ export interface LoginResponse {
   user: User;
 }
 
+export type PaperSize = '58mm' | '80mm' | 'a4';
+
+export interface ShopSettings {
+  shop_name: string;
+  address: string;
+  phone: string;
+  gstin: string;
+  email: string;
+  default_paper_size: PaperSize;
+  footer_text: string;
+  invoice_prefix: string;
+  has_logo: boolean;
+  logo_mime?: string | null;
+  updated_at?: string;
+}
+
 export interface DashboardSummary {
   today: string;
   invoiceCount: number;

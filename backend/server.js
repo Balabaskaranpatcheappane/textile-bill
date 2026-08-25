@@ -10,6 +10,7 @@ const auth = require('./routes/auth');
 const products = require('./routes/products');
 const customers = require('./routes/customers');
 const invoices = require('./routes/invoices');
+const settings = require('./routes/settings');
 
 if (!process.env.JWT_SECRET) {
   console.error('JWT_SECRET is not set. Copy backend/.env.example to .env and set one.');
@@ -50,10 +51,27 @@ app.get('/api/products/:id/barcode.png', async (req, res) => {
   }
 });
 
+// Public shop logo so it can be used from <img src> on the print layout.
+app.get('/api/settings/logo', async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT logo, logo_mime FROM settings WHERE id = 1',
+    );
+    if (!rows[0] || !rows[0].logo) return res.status(404).send('No logo');
+    res.set('Cache-Control', 'no-cache')
+       .type(rows[0].logo_mime || 'application/octet-stream')
+       .send(rows[0].logo);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send('Logo fetch failed');
+  }
+});
+
 // Everything else needs a valid JWT.
 app.use('/api/products',  requireAuth, products);
 app.use('/api/customers', requireAuth, customers);
 app.use('/api/invoices',  requireAuth, invoices);
+app.use('/api/settings',  requireAuth, settings);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

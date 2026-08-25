@@ -10,13 +10,18 @@ A simple billing system for a textiles shop, built with:
 Features:
 
 - Login screen; JWT stored in `localStorage`; auto-logout on 401
+- **Shop settings** page (admin-only): shop name, address, phone, email,
+  GSTIN, uploadable logo, default paper size, invoice-number prefix,
+  footer note
 - Product catalog (name, HSN, unit, price, stock, GST%, **barcode**)
 - **Barcode scanner** field on the New Invoice screen — scan a code and
   the matching line is added (or its qty bumped)
 - Printable **barcode labels** page per product (Code 128, via `bwip-js`)
 - Customer master (name, phone, GSTIN, address)
 - Invoice creation with multiple line items, live sub-total, GST, discount, grand total
-- Printable tax-invoice view
+- Printable tax-invoice view — pick **58 mm**, **80 mm** or **A4** and
+  print; thermal formats use a compact receipt layout, A4 the full tax
+  invoice
 - Dashboard with today's sales, invoice count, low-stock alerts
 
 ## First-time setup

@@ -6,8 +6,12 @@ const { pool } = require('../db');
 const INVOICE_NO_LOCK_KEY = 918273;
 
 async function nextInvoiceNo(client) {
+  const { rows: cfgRows } = await client.query(
+    `SELECT invoice_prefix FROM settings WHERE id = 1`,
+  );
+  const cfgPrefix = (cfgRows[0] && cfgRows[0].invoice_prefix) || 'INV';
   const year = new Date().getFullYear();
-  const prefix = `INV-${year}-`;
+  const prefix = `${cfgPrefix}-${year}-`;
   const { rows } = await client.query(
     `SELECT invoice_no FROM invoices
       WHERE invoice_no LIKE $1
