@@ -1,0 +1,22 @@
+# Optional: `docker compose up -d` starts a local Postgres 16 matching
+# the DATABASE_URL in backend/.env.example.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: textiles
+      POSTGRES_PASSWORD: textiles
+      POSTGRES_DB: textiles
+    ports:
+      - "5432:5432"
+    volumes:
+      - textiles_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U textiles -d textiles"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  textiles_pgdata:
