@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { ApiService } from '../services/api.service';
+import { AutocompleteComponent } from '../shared/autocomplete.component';
 import { Customer, Invoice, InvoiceItem, Product } from '../models';
 
 interface Line extends InvoiceItem {
@@ -13,7 +14,7 @@ interface Line extends InvoiceItem {
 @Component({
   selector: 'app-invoice-create',
   standalone: true,
-  imports: [CommonModule, FormsModule, CurrencyPipe],
+  imports: [CommonModule, FormsModule, CurrencyPipe, AutocompleteComponent],
   template: `
     <div class="header-bar">
       <h2 style="margin:0">New Invoice</h2>
@@ -32,14 +33,20 @@ interface Line extends InvoiceItem {
 
     <div class="panel" style="margin-bottom:12px">
       <div class="grid-3">
-        <div>
-          <label>Customer</label>
-          <select [(ngModel)]="customerId" (ngModelChange)="pickCustomer($event)">
-            <option [ngValue]="null">— Walk-in / new —</option>
-            <option *ngFor="let c of customers()" [ngValue]="c.id">{{ c.name }}</option>
-          </select>
+        <div style="grid-column: span 2">
+          <label>Customer (type to search — leave blank for walk-in)</label>
+          <app-autocomplete
+            [items]="customers()"
+            [display]="customerDisplay"
+            [secondary]="customerSecondary"
+            [searchFields]="customerSearchFields"
+            [value]="customerName"
+            (valueChange)="customerName = $event; onCustomerText($event)"
+            (picked)="pickCustomer($event)"
+            emptyHint="No match — will be saved as a walk-in on this bill"
+            placeholder="Type customer name, phone or GSTIN…">
+          </app-autocomplete>
         </div>
-        <div><label>Name</label><input [(ngModel)]="customerName"></div>
         <div><label>Phone</label><input [(ngModel)]="customerPhone"></div>
         <div><label>GSTIN</label><input [(ngModel)]="customerGstin"></div>
         <div style="grid-column: span 2"><label>Address</label><input [(ngModel)]="customerAddress"></div>
@@ -75,14 +82,17 @@ interface Line extends InvoiceItem {
         <tbody>
           <tr *ngFor="let l of lines(); let i = index">
             <td>
-              <select [ngModel]="l.product_id" (ngModelChange)="pickProduct(i, $event)">
-                <option [ngValue]="null">— Custom item —</option>
-                <option *ngFor="let p of products()" [ngValue]="p.id">
-                  {{ p.name }} (₹{{ p.price }})
-                </option>
-              </select>
-              <input *ngIf="l.product_id === null" [(ngModel)]="l.name"
-                     placeholder="Item name" style="margin-top:6px">
+              <app-autocomplete
+                [items]="products()"
+                [display]="productDisplay"
+                [secondary]="productSecondary"
+                [searchFields]="productSearchFields"
+                [value]="l.name"
+                (valueChange)="onLineNameText(i, $event)"
+                (picked)="pickProduct(i, $event)"
+                emptyHint="No match — will be saved as a custom item"
+                placeholder="Type product name, HSN or barcode…">
+              </app-autocomplete>
             </td>
             <td><input [(ngModel)]="l.hsn"></td>
             <td class="right"><input type="number" min="0" step="0.01" [(ngModel)]="l.qty" style="text-align:right"></td>
@@ -220,27 +230,64 @@ export class InvoiceCreateComponent implements OnInit {
     this.lines.update((ls) => ls.filter((_, idx) => idx !== i));
   }
 
-  pickProduct(i: number, productId: number | null) {
-    const p = productId ? this.products().find((x) => x.id === productId) : null;
+  // ----- Product typeahead -----
+  productDisplay      = (p: Product) => p.name;
+  productSecondary    = (p: Product) =>
+    `₹${p.price} · ${p.stock} ${p.unit} in stock`
+    + (p.barcode ? ` · ${p.barcode}` : '')
+    + (p.hsn ? ` · HSN ${p.hsn}` : '');
+  productSearchFields = ['name', 'hsn', 'barcode'];
+
+  pickProduct(i: number, p: Product) {
     this.lines.update((ls) => {
       const copy = [...ls];
-      if (p) {
-        copy[i] = { ...copy[i]!, product_id: p.id, name: p.name, hsn: p.hsn ?? '', unit: p.unit,
-                   price: p.price, gst: p.gst };
-      } else {
-        copy[i] = { ...copy[i]!, product_id: null };
-      }
+      copy[i] = {
+        ...copy[i]!,
+        product_id: p.id,
+        name: p.name,
+        hsn: p.hsn ?? '',
+        unit: p.unit,
+        price: p.price,
+        gst: p.gst,
+      };
       return copy;
     });
   }
 
-  pickCustomer(id: number | null) {
-    const c = id ? this.customers().find((x) => x.id === id) : null;
-    if (!c) return;
-    this.customerName = c.name;
-    this.customerPhone = c.phone ?? '';
-    this.customerGstin = c.gstin ?? '';
+  /** Free typing in the line-item picker: keep the typed name, but if
+   *  it no longer matches the picked product's name, drop the link. */
+  onLineNameText(i: number, text: string) {
+    this.lines.update((ls) => {
+      const copy = [...ls];
+      const cur = copy[i]!;
+      const linked = this.products().find((p) => p.id === cur.product_id);
+      const clearedLink = linked && linked.name !== text;
+      copy[i] = { ...cur, name: text, product_id: clearedLink ? null : cur.product_id };
+      return copy;
+    });
+  }
+
+  // ----- Customer typeahead -----
+  customerDisplay      = (c: Customer) => c.name;
+  customerSecondary    = (c: Customer) =>
+    [c.phone, c.gstin].filter(Boolean).join(' · ');
+  customerSearchFields = ['name', 'phone', 'gstin'];
+
+  pickCustomer(c: Customer) {
+    this.customerId      = c.id;
+    this.customerName    = c.name;
+    this.customerPhone   = c.phone ?? '';
+    this.customerGstin   = c.gstin ?? '';
     this.customerAddress = c.address ?? '';
+  }
+
+  /** If the user edits the name after picking, treat this as a new
+   *  walk-in and clear the linked customer id. */
+  onCustomerText(text: string) {
+    if (this.customerId != null) {
+      const linked = this.customers().find((c) => c.id === this.customerId);
+      if (!linked || linked.name !== text) this.customerId = null;
+    }
   }
 
   canSave() {
